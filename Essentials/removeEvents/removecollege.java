@@ -15,7 +15,6 @@ public class removecollege {
     private DefaultTableModel collegeModel;
     private String collegeCode;
 
-   
     private String url = "jdbc:mysql://localhost:3306/mydata";
     private String user = "root";
     private String password = "password";
@@ -25,63 +24,52 @@ public class removecollege {
         this.de = de;
         this.collegeCode = collegeCode;
 
-
         collegeModel = maingui.getcollegeModel();
         int selectedRow = findCollegeRow(collegeModel, collegeCode);
         if (selectedRow == -1) {
             JOptionPane.showMessageDialog(null, "College not found in the table!", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
-        
-      
+
         int confirmation = JOptionPane.showConfirmDialog(
             null,
-            "Are you sure you want to delete college: " + collegeCode + "?\n"
-          + "This will cascade delete all programs under this college and all students under those programs.",
+            "Are you sure you want to delete college: " + collegeCode + "?\n" +
+            "This will cascade delete all programs under this college and all students under those programs.",
             "Confirm Deletion",
             JOptionPane.YES_NO_OPTION,
             JOptionPane.WARNING_MESSAGE
         );
         if (confirmation == JOptionPane.YES_OPTION) {
-          
             deleteCollegeFromGUI(selectedRow);
-            
             cascadeDeleteCollegeFromDB();
         }
     }
 
     private int findCollegeRow(DefaultTableModel model, String collegeCode) {
         for (int i = 0; i < model.getRowCount(); i++) {
-            if (model.getValueAt(i, 0).toString().trim().equals(collegeCode)) {
+            Object val = model.getValueAt(i, 0);
+            if (val != null && val.toString().trim().equals(collegeCode)) {
                 return i;
             }
         }
         return -1;
     }
 
-
- 
     private void deleteCollegeFromGUI(int collegeRowIndex) {
-     
         List<String> programsToDelete = getProgramsByCollege(maingui, collegeCode);
         System.out.println("Programs to delete for college " + collegeCode + ": " + programsToDelete);
-        
-        
+
         removeStudentsByPrograms(maingui, de, programsToDelete);
-      
         removeAllProgramsByCollege(maingui, programsToDelete, de);
-       
         removeCollegeRecord(maingui, collegeCode, collegeRowIndex, de);
-        
+
         JOptionPane.showMessageDialog(null, "College, its programs, and associated students deleted successfully from GUI.");
     }
 
-   
     private void cascadeDeleteCollegeFromDB() {
         try (Connection conn = DriverManager.getConnection(url, user, password)) {
             conn.setAutoCommit(false);
 
-           
             List<String> programCodes = new ArrayList<>();
             try (PreparedStatement ps = conn.prepareStatement("SELECT ProgramCode FROM program WHERE CollegeCode = ?")) {
                 ps.setString(1, collegeCode);
@@ -91,8 +79,7 @@ public class removecollege {
                     }
                 }
             }
-            
-           
+
             try (PreparedStatement ps = conn.prepareStatement("DELETE FROM student WHERE ProgramCode = ?")) {
                 for (String progCode : programCodes) {
                     ps.setString(1, progCode);
@@ -100,15 +87,13 @@ public class removecollege {
                     System.out.println("Deleted students for program: " + progCode);
                 }
             }
-            
-          
+
             try (PreparedStatement ps = conn.prepareStatement("DELETE FROM program WHERE CollegeCode = ?")) {
                 ps.setString(1, collegeCode);
                 int programsDeleted = ps.executeUpdate();
                 System.out.println("Deleted " + programsDeleted + " program(s) under college " + collegeCode);
             }
 
-            
             try (PreparedStatement ps = conn.prepareStatement("DELETE FROM college WHERE CollegeCode = ?")) {
                 ps.setString(1, collegeCode);
                 int collegesDeleted = ps.executeUpdate();
@@ -118,7 +103,7 @@ public class removecollege {
                     System.out.println("No college found with CollegeCode: " + collegeCode);
                 }
             }
-            
+
             conn.commit();
             JOptionPane.showMessageDialog(null, "Cascading deletion completed successfully in the database.");
 
@@ -128,41 +113,43 @@ public class removecollege {
         }
     }
 
-  
     private List<String> getProgramsByCollege(GUI gui, String deletedCollege) {
         DefaultTableModel programModel = gui.getprogramModel();
         List<String> programs = new ArrayList<>();
         for (int i = 0; i < programModel.getRowCount(); i++) {
-          
-            String college = programModel.getValueAt(i, 2).toString().trim();
-            if (college.equals(deletedCollege)) {
-                String progCode = programModel.getValueAt(i, 0).toString().trim();
-                programs.add(progCode);
-                System.out.println("Found program " + progCode + " for college " + deletedCollege);
+            Object colVal = programModel.getValueAt(i, 2);
+            if (colVal != null && colVal.toString().trim().equals(deletedCollege)) {
+                Object pVal = programModel.getValueAt(i, 0);
+                if (pVal != null) {
+                    String progCode = pVal.toString().trim();
+                    programs.add(progCode);
+                    System.out.println("Found program " + progCode + " for college " + deletedCollege);
+                }
             }
         }
         return programs;
     }
-        
-   
+
     private void removeStudentsByPrograms(GUI gui, delete de, List<String> programsToDelete) {
         DefaultTableModel studentModel = gui.getstudentModel();
         if (studentModel == null) {
             System.err.println("Error: Student table model is null.");
             return;
         }
-       
-      
-        int programColumnIndex = 5; 
+        int programColumnIndex = 5;
         if (programColumnIndex >= studentModel.getColumnCount()) {
             System.err.println("Error: Invalid column index for program codes in student table.");
             return;
         }
-        
         for (String programCode : programsToDelete) {
             System.out.println("Attempting to remove student rows with program code: " + programCode);
             for (int i = studentModel.getRowCount() - 1; i >= 0; i--) {
-                String cellValue = studentModel.getValueAt(i, programColumnIndex).toString().trim();
+                Object cellObj = studentModel.getValueAt(i, programColumnIndex);
+                if (cellObj == null) {
+                    System.out.println("Null program code at student row " + i);
+                    continue;
+                }
+                String cellValue = cellObj.toString().trim();
                 if (cellValue.equalsIgnoreCase(programCode)) {
                     System.out.println("Removing student row at index " + i + " with program code: " + cellValue);
                     studentModel.removeRow(i);
@@ -171,49 +158,50 @@ public class removecollege {
         }
         studentModel.fireTableDataChanged();
     }
+
     private void removeAllProgramsByCollege(GUI gui, List<String> programsToDelete, delete de) {
         DefaultTableModel programModel = gui.getprogramModel();
         List<String[]> updatedProgramData = new ArrayList<>();
 
         for (int i = 0; i < programModel.getRowCount(); i++) {
-            String progCode = programModel.getValueAt(i, 0).toString().trim();
+            Object codeObj = programModel.getValueAt(i, 0);
+            if (codeObj == null) continue;
+            String progCode = codeObj.toString().trim();
             if (!programsToDelete.contains(progCode)) {
                 int columnCount = programModel.getColumnCount();
                 String[] rowData = new String[columnCount];
                 for (int j = 0; j < columnCount; j++) {
-                    rowData[j] = programModel.getValueAt(i, j).toString();
+                    Object obj = programModel.getValueAt(i, j);
+                    rowData[j] = (obj != null) ? obj.toString() : "";
                 }
                 updatedProgramData.add(rowData);
             } else {
                 System.out.println("Deleting program: " + progCode);
             }
         }
-       
         refreshTable(programModel, updatedProgramData);
     }
 
- 
     private void removeCollegeRecord(GUI gui, String collegeCode, int selectedRow, delete de) {
         DefaultTableModel collegeModel = gui.getcollegeModel();
         List<String[]> updatedCollegeData = new ArrayList<>();
 
         for (int i = 0; i < collegeModel.getRowCount(); i++) {
-            if (i != selectedRow) { 
+            if (i != selectedRow) {
                 int columnCount = collegeModel.getColumnCount();
                 String[] rowData = new String[columnCount];
                 for (int j = 0; j < columnCount; j++) {
-                    rowData[j] = collegeModel.getValueAt(i, j).toString();
+                    Object obj = collegeModel.getValueAt(i, j);
+                    rowData[j] = (obj != null) ? obj.toString() : "";
                 }
                 updatedCollegeData.add(rowData);
             } else {
                 System.out.println("Deleting college record at row: " + i);
             }
         }
-      
         refreshTable(collegeModel, updatedCollegeData);
     }
 
-    
     private void refreshTable(DefaultTableModel model, List<String[]> updatedData) {
         model.setRowCount(0);
         for (String[] row : updatedData) {

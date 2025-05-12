@@ -57,7 +57,7 @@ public class AutoCompletion extends PlainDocument {
                 }
             }
         };
-        // Bug 5100422 on Java 1.5: Editable JComboBox won't hide popup when tabbing out
+        
         hidePopupOnFocusLoss=System.getProperty("java.version").startsWith("1.5");
         // Highlight whole text when gaining focus
         editorFocusListener = new FocusAdapter() {
@@ -65,7 +65,7 @@ public class AutoCompletion extends PlainDocument {
                 highlightCompletedText(0);
             }
             public void focusLost(FocusEvent e) {
-                // Workaround for Bug 5100422 - Hide Popup on focus loss
+                
                 if (hidePopupOnFocusLoss) comboBox.setPopupVisible(false);
             }
         };

@@ -38,7 +38,7 @@ public class loadcollege {
                     data[i - 1] = rs.getString(i);
                 }
                 
-                collegemodel.addRow(data);
+                collegemodel.addRow(data);  
             }
             
            

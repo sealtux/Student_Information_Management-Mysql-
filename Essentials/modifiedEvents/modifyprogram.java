@@ -168,18 +168,32 @@ public class modifyprogram {
         return collegeCodes.toArray(new String[0]);
     }
 
-    private boolean programExists(DefaultTableModel model, String code, String name, int ignoreRow) {
-        for (int i = 0; i < model.getRowCount(); i++) {
-            if (i == ignoreRow) continue;
-            String existingCode = model.getValueAt(i, 0).toString().trim();
-            String existingName = model.getValueAt(i, 1).toString().trim();
-            
-            if (existingCode.equals(code) || existingName.equals(name)) {
-                return true;
-            }
+private boolean programExists(DefaultTableModel model,
+                              String code,
+                              String name,
+                              int ignoreRow) {
+    // normalize once
+    String codeKey = code.trim().toLowerCase();
+    String nameKey = name.trim().toLowerCase();
+
+    for (int i = 0; i < model.getRowCount(); i++) {
+        if (i == ignoreRow) continue;  // skip the row we’re editing
+
+        String existingCode = model.getValueAt(i, 0)
+                                   .toString().trim()
+                                   .toLowerCase();
+        String existingName = model.getValueAt(i, 1)
+                                   .toString().trim()
+                                   .toLowerCase();
+
+        // compare against the normalized inputs
+        if (existingCode.equals(codeKey) || existingName.equals(nameKey)) {
+            return true;
         }
-        return false;
     }
+    return false;
+}
+
 
   
     private void updateProgramRecordInDatabase(String oldCode, String newCode, String newName, String newCollegeCode) {

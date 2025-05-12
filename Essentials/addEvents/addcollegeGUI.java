@@ -49,30 +49,41 @@ public class addcollegeGUI {
             DefaultTableModel model = mainGUI.getcollegeModel();
             boolean exists = false;
             boolean existscollegename = false;
+            String collegecoNorm = collegeco.trim();
+            String collegenaNorm = collegena.trim();
+            
             for (int i = 0; i < model.getRowCount(); i++) {
-                if (model.getValueAt(i, 0).toString().trim().equals(collegeco)) {
-                    exists = true;
-                    break;
-                }
-            }
-            for (int i = 0; i < model.getRowCount(); i++) {
-                if (model.getValueAt(i, 1).toString().trim().equals(collegena)) {
-                    existscollegename = true;
-                    break;
-                }
-            }
+    String code = model.getValueAt(i, 0).toString().trim();
+    if (code.equalsIgnoreCase(collegecoNorm)) {
+        exists = true;
+        break;
+    }
+}
 
-            if (exists) {
-                JOptionPane.showMessageDialog(addCollegeDialog, "Record with College Code " + collegeco + " already exists.", "Error", JOptionPane.ERROR_MESSAGE);
-                addCollegeDialog.dispose();
-                return;
-            }
+// check name (column 1) case-insensitively
+for (int i = 0; i < model.getRowCount(); i++) {
+    String name = model.getValueAt(i, 1).toString().trim();
+    if (name.equalsIgnoreCase(collegenaNorm)) {
+        existscollegename = true;
+        break;
+    }
+}
 
-            if (existscollegename) {
-                JOptionPane.showMessageDialog(addCollegeDialog, "Record with College Name " + collegena + " already exists.", "Error", JOptionPane.ERROR_MESSAGE);
-                addCollegeDialog.dispose();
-                return;
-            }
+if (exists) {
+    JOptionPane.showMessageDialog(addCollegeDialog,
+        "Record with College Code " + collegeco + " already exists.",
+        "Error", JOptionPane.ERROR_MESSAGE);
+    addCollegeDialog.dispose();
+    return;
+}
+
+if (existscollegename) {
+    JOptionPane.showMessageDialog(addCollegeDialog,
+        "Record with College Name " + collegena + " already exists.",
+        "Error", JOptionPane.ERROR_MESSAGE);
+    addCollegeDialog.dispose();
+    return;
+}
 
             
             int decision = JOptionPane.showConfirmDialog(

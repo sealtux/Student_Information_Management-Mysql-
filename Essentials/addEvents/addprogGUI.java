@@ -67,28 +67,34 @@ public class addprogGUI {
                     JOptionPane.showMessageDialog(addProgramDialog, "All fields must be filled!", "Error", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
+                String codeNorm = programCode;
+                String nameNorm = programName;
 
                 DefaultTableModel programModel = mainGui.getprogramModel();
                 boolean duplicateFound = false;
               
                 for (int i = 0; i < programModel.getRowCount(); i++) {
-                    if (programModel.getValueAt(i, 0).toString().trim().equals(programCode)) {
-                        duplicateFound = true;
-                        break;
-                    }
+                String existingCode = programModel.getValueAt(i, 0).toString().trim();
+                if (existingCode.equalsIgnoreCase(codeNorm)) {
+                duplicateFound = true;
+                break;
                 }
+                        }
+
                 if (duplicateFound) {
                     JOptionPane.showMessageDialog(addProgramDialog, "A record with this Program Code already exists.", "Error", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
+
                 
                 duplicateFound = false;
                 for (int i = 0; i < programModel.getRowCount(); i++) {
-                    if (programModel.getValueAt(i, 1).toString().trim().equals(programName)) {
-                        duplicateFound = true;
-                        break;
-                    }
+                String existingName = programModel.getValueAt(i, 1).toString().trim();
+                if (existingName.equalsIgnoreCase(nameNorm)) {
+                duplicateFound = true;
+                break;
                 }
+                    }
                 if (duplicateFound) {
                     JOptionPane.showMessageDialog(addProgramDialog, "A record with this Program Name already exists.", "Error", JOptionPane.ERROR_MESSAGE);
                     return;

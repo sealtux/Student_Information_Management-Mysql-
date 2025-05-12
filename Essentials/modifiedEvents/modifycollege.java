@@ -105,10 +105,12 @@ public class modifycollege {
                 JOptionPane.showMessageDialog(editDialog, "College Code must contain a value.", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
+            
             if (!newName.matches(".*[a-zA-Z].*")) {
                 JOptionPane.showMessageDialog(editDialog, "College Name must contain a value.", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
+
             if (collegeExists(gui.getcollegeModel(), newCode, newName, rowIndex)) {
                 JOptionPane.showMessageDialog(editDialog, "A college with this code or name already exists.", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
@@ -141,11 +143,13 @@ public class modifycollege {
     }
 
     private boolean collegeExists(DefaultTableModel model, String code, String name, int ignoreRow) {
+        String codeKey = code.trim().toLowerCase();
+        String nameKey = name.trim().toLowerCase();
         for (int i = 0; i < model.getRowCount(); i++) {
             if (i == ignoreRow) continue;
-            String existingCode = model.getValueAt(i, 0).toString().trim();
-            String existingName = model.getValueAt(i, 1).toString().trim();
-            if (existingCode.equals(code) || existingName.equals(name)) {
+            String existingCode = model.getValueAt(i, 0).toString().trim().toLowerCase();;
+            String existingName = model.getValueAt(i, 1).toString().trim().toLowerCase();;
+            if (existingCode.equals(codeKey) || existingName.equals(nameKey)) {
                 return true;
             }
         }

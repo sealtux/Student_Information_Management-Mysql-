@@ -2,15 +2,18 @@ package Essentials.modifiedEvents;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-import java.io.*;
 import Essentials.GUI;
+import java.sql.*;
 
 public class modifystudentGUI {
 
-    public static final String FILE_PATH = "C:\\Users\\Admin\\Desktop\\ccc151\\students.csv";
+    private static final String DB_URL = "jdbc:mysql://localhost:3306/mydata?useSSL=false";
+    private static final String DB_USER = "root";
+    private static final String DB_PASSWORD = "password";
     
     private GUI maingui;
     private DefaultTableModel model;
+    private int rowIndex; // store for firing updates
     
     public modifystudentGUI(GUI gui, String id, String firstName, String lastName, String yearLevel, String gender, String programCode) {
         this.maingui = gui;
@@ -23,9 +26,8 @@ public class modifystudentGUI {
         }
 
         // Convert view index to model index
-        int modelRow = maingui.getStudentTable().convertRowIndexToModel(selectedRow);
-        
-        modifiedFrame(modelRow, id, firstName, lastName, yearLevel, gender, programCode);
+        this.rowIndex = maingui.getStudentTable().convertRowIndexToModel(selectedRow);
+        modifiedFrame(rowIndex, id, firstName, lastName, yearLevel, gender, programCode);
     }
     
     private void modifiedFrame(int rowIndex, String id, String firstName, String lastName, String yearLevel, String gender, String programCode) {
@@ -56,7 +58,8 @@ public class modifystudentGUI {
         DefaultTableModel programModel = maingui.getprogramModel();
         JComboBox<String> programCodeCombo = new JComboBox<>();
         for (int i = 0; i < programModel.getRowCount(); i++) {
-            programCodeCombo.addItem(programModel.getValueAt(i, 0).toString().trim());
+            Object obj = programModel.getValueAt(i, 0);
+            if (obj != null) programCodeCombo.addItem(obj.toString().trim());
         }
         programCodeCombo.setSelectedItem(programCode);
         
@@ -105,12 +108,10 @@ public class modifystudentGUI {
                 return;
             }
             
-           
             if (!newId.matches("^(?!0000)\\d{4}-\\d{4}$")) {
-                JOptionPane.showMessageDialog(editDialog, "Invalid ID format. It should be YYYY-NNNN, where YYYY is a nonzero year.", "Invalid ID", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(editDialog, "Invalid ID format. It should be YYYY-NNNN.", "Invalid ID", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-            
             
             int yearPart = Integer.parseInt(newId.substring(0, 4));
             if (yearPart < 2000) {
@@ -118,17 +119,17 @@ public class modifystudentGUI {
                 return;
             }
             
-           
+            // Duplicate check
             for (int i = 0; i < model.getRowCount(); i++) {
-                if (i == rowIndex) {
-                    continue; 
-                }
-                String existingId = model.getValueAt(i, 0).toString().trim();
-                String existingFirstName = model.getValueAt(i, 1).toString().trim();
-                String existingLastName = model.getValueAt(i, 2).toString().trim();
+                if (i == rowIndex) continue;
+                Object idObj = model.getValueAt(i, 0);
+                Object fnObj = model.getValueAt(i, 1);
+                Object lnObj = model.getValueAt(i, 2);
+                String existingId = (idObj != null) ? idObj.toString().trim() : "";
+                String existingFirstName = (fnObj != null) ? fnObj.toString().trim() : "";
+                String existingLastName = (lnObj != null) ? lnObj.toString().trim() : "";
                 if (existingId.equals(newId) ||
-                    (existingFirstName.equalsIgnoreCase(newFirstName) &&
-                     existingLastName.equalsIgnoreCase(newLastName))) {
+                    (existingFirstName.equalsIgnoreCase(newFirstName) && existingLastName.equalsIgnoreCase(newLastName))) {
                     JOptionPane.showMessageDialog(editDialog, "A record with this inputted value already exists.", "Duplicate Record", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
@@ -149,7 +150,9 @@ public class modifystudentGUI {
                 model.setValueAt(newGender, rowIndex, 4);
                 model.setValueAt(newProgramCode, rowIndex, 5);
 
-                updateCSVFile();
+                updateStudentRecordsInDatabase(id, newId, newFirstName, newLastName, newYearLevel, newGender, newProgramCode);
+                // Refresh row
+                model.fireTableRowsUpdated(rowIndex, rowIndex);
 
                 JOptionPane.showMessageDialog(editDialog, "Student record updated successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
                 editDialog.dispose();
@@ -158,17 +161,45 @@ public class modifystudentGUI {
         
         editDialog.setVisible(true);
     }
-    
-    private void updateCSVFile() {
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(FILE_PATH))) {
-            for (int i = 0; i < model.getRowCount(); i++) {
-                bw.write(model.getValueAt(i, 0) + "," + model.getValueAt(i, 1) + "," +
-                         model.getValueAt(i, 2) + "," + model.getValueAt(i, 3) + "," +
-                         model.getValueAt(i, 4) + "," + model.getValueAt(i, 5));
-                bw.newLine();
+
+    private void updateStudentRecordsInDatabase(
+            String oldId,
+            String newId,
+            String firstName,
+            String lastName,
+            String yearLevel,
+            String gender,
+            String programCode) {
+        String sql = "UPDATE student SET " +
+                     "StudentID = ?, " +
+                     "FirstName = ?, " +
+                     "LastName = ?, " +
+                     "YearLevel = ?, " +
+                     "Gender = ?, " +
+                     "ProgramCode = ? " +
+                     "WHERE StudentID = ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, newId);
+            pstmt.setString(2, firstName);
+            pstmt.setString(3, lastName);
+            pstmt.setString(4, yearLevel);
+            pstmt.setString(5, gender);
+            pstmt.setString(6, programCode);
+            pstmt.setString(7, oldId);
+
+            int rowsAffected = pstmt.executeUpdate();
+            if (rowsAffected > 0) {
+                System.out.println("Student record updated successfully in the database.");
+            } else {
+                System.out.println("No student found with ID: " + oldId);
             }
-        } catch (IOException ex) {
+        } catch (SQLException ex) {
             ex.printStackTrace();
+            JOptionPane.showMessageDialog(null,
+                "Error updating student records in the database: " + ex.getMessage(),
+                "Database Error",
+                JOptionPane.ERROR_MESSAGE);
         }
     }
 }
